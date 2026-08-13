@@ -78,7 +78,6 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
         "user": {"id": user.id, "username": user.username, "nickname": user.nickname}
     }
 
-# ----------------------------------------------------
 # 게시글 API
 # ----------------------------------------------------
 
