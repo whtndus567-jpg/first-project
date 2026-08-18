@@ -12,31 +12,84 @@ export default function Signup() {
   const [usernameMsg, setUsernameMsg] = useState('')
   const [nicknameMsg, setNicknameMsg] = useState('')
 
-  // 🔥 아이디 대문자 감지 상태 추가
+  // 🔥 아이디 한글 및 유효성 상태
+  const [usernameError, setUsernameError] = useState('')
   const [hasUppercase, setHasUppercase] = useState(false)
+
+  // 🔥 비밀번호 유효성 및 Caps Lock 상태
+  const [passwordError, setPasswordError] = useState('')
+  const [capsLockActive, setCapsLockActive] = useState(false)
 
   const navigate = useNavigate()
 
-  // 아이디 입력 및 대문자 감지/소문자 자동 변환
+  // 1. 아이디 입력 및 실시간 유효성 검사 (한글 차단)
   const handleUsernameChange = (e) => {
     const rawVal = e.target.value
 
-    // 대문자가 포함되어 있는지 검사
+    // 한글 포함 여부 검사
+    const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/
+    if (koreanRegex.test(rawVal)) {
+      setUsernameError('아이디와 비밀번호에는 영문, 숫자, 특수문자만 입력할 수 있어요.')
+    } else {
+      setUsernameError('')
+    }
+
+    // 대문자 포함 여부 검사
     if (/[A-Z]/.test(rawVal)) {
       setHasUppercase(true)
     } else {
       setHasUppercase(false)
     }
 
-    // 소문자로 자동 변환하여 저장
     setUsername(rawVal.toLowerCase())
     setIsUsernameChecked(false)
     setUsernameMsg('')
   }
 
-  // 아이디 중복 확인
+  // 2. 비밀번호 입력 및 실시간 유효성 검사 (4자 이상, 영문, 특수문자 필수)
+  const handlePasswordChange = (e) => {
+    const val = e.target.value
+    setPassword(val)
+
+    if (!val) {
+      setPasswordError('')
+      return
+    }
+
+    const hasMinLen = val.length >= 4
+    const hasLetter = /[a-zA-Z]/.test(val)
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(val)
+
+    if (!hasMinLen || !hasLetter || !hasSpecial) {
+      setPasswordError('비밀번호는 4자리 이상이며 영문과 특수문자를 모두 포함해야 합니다.')
+    } else {
+      setPasswordError('')
+    }
+  }
+
+  // Caps Lock 감지
+  const handlePasswordKeyDown = (e) => {
+    if (e.getModifierState) {
+      setCapsLockActive(e.getModifierState('CapsLock'))
+    }
+  }
+
+  const handlePasswordKeyUp = (e) => {
+    if (e.getModifierState) {
+      setCapsLockActive(e.getModifierState('CapsLock'))
+    }
+  }
+
+  // 3. 아이디 중복 확인 (한글이 있거나 유효하지 않으면 동작 차단!)
   const handleCheckUsername = async () => {
     if (!username.trim()) return alert('아이디를 입력해 주세요.')
+
+    // ⛔ 한글 포함 등 유효성 에러가 있는 경우 중복확인 차단
+    const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/
+    if (koreanRegex.test(username) || usernameError) {
+      return alert('아이디와 비밀번호에는 영문, 숫자, 특수문자만 입력할 수 있어요.')
+    }
+
     try {
       const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`)
       const data = await res.json()
@@ -52,7 +105,7 @@ export default function Signup() {
     }
   }
 
-  // 닉네임 중복 확인
+  // 4. 닉네임 중복 확인
   const handleCheckNickname = async () => {
     if (!nickname.trim()) return alert('닉네임을 입력해 주세요.')
     try {
@@ -70,13 +123,29 @@ export default function Signup() {
     }
   }
 
-  // 회원가입 제출
+  // 5. 회원가입 제출 (조건 미달시 차단)
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // ⛔ 아이디 유효성 검사
+    const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/
+    if (koreanRegex.test(username) || usernameError) {
+      return alert('아이디와 비밀번호에는 영문, 숫자, 특수문자만 입력할 수 있어요.')
+    }
+
     if (!isUsernameChecked) return alert('아이디 중복 확인을 진행해 주세요.')
     if (!isNicknameChecked) return alert('닉네임 중복 확인을 진행해 주세요.')
+
+    // ⛔ 비밀번호 유효성 검사 (4자 이상, 영문, 특수문자)
+    const hasMinLen = password.length >= 4
+    const hasLetter = /[a-zA-Z]/.test(password)
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+
+    if (!hasMinLen || !hasLetter || !hasSpecial) {
+      return alert('비밀번호는 4자리 이상이며 영문과 특수문자를 모두 포함해야 합니다.')
+    }
+
     if (password !== confirmPassword) return alert('비밀번호가 일치하지 않습니다.')
-    if (password.length < 4) return alert('비밀번호는 최소 4자 이상이어야 합니다.')
 
     try {
       const res = await fetch('/api/auth/signup', {
@@ -123,14 +192,20 @@ export default function Signup() {
             </button>
           </div>
 
-          {/* 🔥 대문자 감지 안내 문구 */}
-          {hasUppercase && (
+          {/* 🔥 아이디 한글 포함 시 경고 메시지 */}
+          {usernameError && (
+            <p className="text-xs text-rose-400 mt-1.5 font-medium">{usernameError}</p>
+          )}
+
+          {/* 대문자 감지 안내 문구 */}
+          {hasUppercase && !usernameError && (
             <p className="text-xs text-amber-400 mt-1">
               * 아이디는 소문자로 자동 변환됩니다.
             </p>
           )}
 
-          {usernameMsg && (
+          {/* 중복확인 결과 메시지 (한글 에러가 없을 때만 표시) */}
+          {usernameMsg && !usernameError && (
             <p className={`text-xs mt-1 ${isUsernameChecked ? 'text-emerald-400' : 'text-rose-400'}`}>
               {usernameMsg}
             </p>
@@ -174,11 +249,25 @@ export default function Signup() {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호 입력 (4자 이상)"
+            onChange={handlePasswordChange}
+            onKeyDown={handlePasswordKeyDown}
+            onKeyUp={handlePasswordKeyUp}
+            placeholder="비밀번호 입력 (4자 이상, 영문+특수문자 포함)"
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
             required
           />
+
+          {/* 🔥 비밀번호 미달 조건(4자리 이상, 영문, 특수문자) 실시간 경고 */}
+          {passwordError && (
+            <p className="text-xs text-rose-400 mt-1.5 font-medium">{passwordError}</p>
+          )}
+
+          {/* 🔥 Caps Lock 안내 문구 */}
+          {capsLockActive && (
+            <p className="text-xs text-amber-400 mt-1 font-medium">
+              키보드 왼쪽 대문자 고정(Caps Look)이 켜져 있어요 비밀번호를 확인하세요.
+            </p>
+          )}
         </div>
 
         {/* 비밀번호 확인 */}

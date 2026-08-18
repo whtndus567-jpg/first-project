@@ -4,12 +4,50 @@ import { useNavigate } from 'react-router-dom'
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [usernameError, setUsernameError] = useState('')
+  const [capsLockActive, setCapsLockActive] = useState(false)
+  
   const navigate = useNavigate()
+
+  // 아이디 입력 핸들러 (실시간 한글 체크)
+  const handleUsernameChange = (e) => {
+    const val = e.target.value
+    setUsername(val)
+
+    const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/
+    if (koreanRegex.test(val)) {
+      setUsernameError('아이디와 비밀번호에는 영문, 숫자, 특수문자만 입력할 수 있어요.')
+    } else {
+      setUsernameError('')
+    }
+  }
+
+  // 비밀번호 입력 및 Caps Lock 감지 핸들러
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value)
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.getModifierState) {
+      setCapsLockActive(e.getModifierState('CapsLock'))
+    }
+  }
+
+  const handleKeyUp = (e) => {
+    if (e.getModifierState) {
+      setCapsLockActive(e.getModifierState('CapsLock'))
+    }
+  }
 
   const handleLogin = async (e) => {
     e.preventDefault()
     if (!username.trim() || !password.trim()) {
       return alert('아이디와 비밀번호를 모두 입력해 주세요.')
+    }
+
+    const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/
+    if (koreanRegex.test(username)) {
+      return alert('아이디에는 한글을 사용할 수 없습니다.')
     }
 
     try {
@@ -61,11 +99,14 @@ export default function Login({ onLoginSuccess }) {
           <input
             type="text"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={handleUsernameChange}
             placeholder="아이디 입력"
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
             required
           />
+          {usernameError && (
+            <p className="mt-1.5 text-xs text-rose-400 font-medium">{usernameError}</p>
+          )}
         </div>
 
         <div>
@@ -73,11 +114,18 @@ export default function Login({ onLoginSuccess }) {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={handlePasswordChange}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleKeyUp}
             placeholder="비밀번호 입력"
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
             required
           />
+          {capsLockActive && (
+            <p className="mt-1.5 text-xs text-amber-400 font-medium">
+              키보드 왼쪽 대문자 고정(Caps Look)이 켜져 있어요 비밀번호를 확인하세요.
+            </p>
+          )}
         </div>
 
         <button
