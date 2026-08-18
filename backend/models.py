@@ -35,10 +35,15 @@ class Post(Base):
     author_user = relationship("User", back_populates="posts")
     comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
 
-    # 🔥 댓글 개수를 자동으로 계산해 주는 속성 추가
+    # 🔥 댓글 개수를 자동으로 계산해 주는 속성
     @property
     def comments_count(self):
         return len(self.comments) if self.comments else 0
+
+    # 🔥 HOT 게시글 판별 속성 (조회수 10회 이상 OR 좋아요 5개 이상)
+    @property
+    def is_hot(self):
+        return self.views_count >= 10 or self.likes_count >= 5
 
 class Comment(Base):
     __tablename__ = "comments"

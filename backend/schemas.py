@@ -60,6 +60,7 @@ class PostListResponse(BaseModel):
     id: int
     title: str
     is_notice: bool
+    is_hot: bool  # 🔥 HOT 여부 추가
     created_at: datetime
     views_count: int
     likes_count: int
@@ -73,6 +74,7 @@ class PostResponse(BaseModel):
     title: str
     content: str
     is_notice: bool
+    is_hot: bool  # 🔥 HOT 여부 추가
     created_at: datetime
     views_count: int
     likes_count: int

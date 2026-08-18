@@ -1,40 +1,53 @@
-import React, { useEffect, useState } from 'react';
-import { formatRelativeTime } from '../utils/date';
+import React from 'react';
 
-export default function MyPage() {
-  const [myPosts, setMyPosts] = useState([]);
-
-  useEffect(() => {
+export default function PostList({ posts = [], onOpenDetail }) {
+  const handleTitleClick = (postId) => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    
+    if (!token) {
+      alert('게시글 상세보기 및 이용은 로그인 후 가능합니다.');
+      return;
+    }
 
-    fetch('/api/users/me/posts', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setMyPosts(data);
-      })
-      .catch((err) => console.error(err));
-  }, []);
+    onOpenDetail(postId);
+  };
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">마이페이지</h2>
-      <h3 className="text-lg font-semibold mb-2">내가 작성한 게시글 ({myPosts.length})</h3>
-      
-      <div className="space-y-2">
-        {myPosts.length === 0 ? (
-          <p className="text-gray-500">작성한 게시글이 없습니다.</p>
-        ) : (
-          myPosts.map((post) => (
-            <div key={post.id} className="p-3 border rounded flex justify-between items-center">
-              <span className="font-medium">{post.title}</span>
-              <span className="text-xs text-gray-400">{formatRelativeTime(post.created_at)}</span>
+    <div className="space-y-3">
+      {posts.map((post) => {
+        console.log("확인용 포스트 객체:", post);
+
+        return (
+          <div key={post.id} className="p-4 border border-slate-800 bg-slate-900 rounded-xl shadow-sm hover:shadow transition flex justify-between items-center text-slate-100">
+            <div className="space-y-2 w-full">
+              <div 
+                onClick={() => handleTitleClick(post.id)}
+                className="cursor-pointer font-bold text-lg hover:text-indigo-400 flex items-center gap-2"
+              >
+                {/* 🔥 공지 뱃지 */}
+                {post.is_notice && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded font-normal">공지</span>
+                )}
+                
+                {/* 🔥 HOT 뱃지 추가 */}
+                {post.is_hot && (
+                  <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded font-normal flex items-center gap-0.5">
+                    HOT 🔥
+                  </span>
+                )}
+
+                {post.title}
+              </div>
+
+              <div className="flex items-center gap-4 text-xs text-slate-400">
+                <span>조회수 {post.views_count ?? 0}</span>
+                <span>💬 댓글 {post.comments_count ?? post.comment_count ?? 0}</span>
+                <span>❤️ 좋아요 {post.likes_count ?? 0}</span>
+              </div>
             </div>
-          ))
-        )}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

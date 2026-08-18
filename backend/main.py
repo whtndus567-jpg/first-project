@@ -78,10 +78,11 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
         "user": {"id": user.id, "username": user.username, "nickname": user.nickname}
     }
 
+# ----------------------------------------------------
 # 게시글 API
 # ----------------------------------------------------
 
-# 1. 목록 조회
+# 1. 목록 조회 (공지사항 상단 배치 반영)
 @app.get("/api/posts", response_model=List[PostListResponse])
 def get_posts(db: Session = Depends(get_db)):
     results = (
@@ -101,6 +102,7 @@ def get_posts(db: Session = Depends(get_db)):
             "id": post.id,
             "title": post.title,
             "is_notice": post.is_notice,
+            "is_hot": post.is_hot,  # 🔥 HOT 여부 포함
             "created_at": post.created_at,
             "views_count": post.views_count,
             "likes_count": post.likes_count,
@@ -109,7 +111,7 @@ def get_posts(db: Session = Depends(get_db)):
         
     return posts_list
 
-# 2. 게시글 상세 조회 (빠져있던 핵심 라우터 추가)
+# 2. 게시글 상세 조회
 @app.get("/api/posts/{post_id}", response_model=PostResponse)
 def get_post_detail(post_id: int, db: Session = Depends(get_db)):
     db_post = db.query(Post).options(selectinload(Post.comments)).filter(Post.id == post_id).first()
@@ -159,7 +161,7 @@ def update_post(post_id: int, post_data: PostUpdate, current_user: User = Depend
     db.refresh(db_post)
     return db_post
 
-# 🔥 [추가] 게시글 삭제 API
+# 5. 게시글 삭제 API
 @app.delete("/api/posts/{post_id}")
 def delete_post(post_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     db_post = db.query(Post).filter(Post.id == post_id).first()
@@ -172,7 +174,7 @@ def delete_post(post_id: int, current_user: User = Depends(get_current_user), db
     db.commit()
     return {"message": "게시글이 삭제되었습니다."}
     
-# 5. 좋아요
+# 6. 좋아요
 @app.post("/api/posts/{post_id}/like")
 def like_post(post_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     db_post = db.query(Post).filter(Post.id == post_id).first()
@@ -180,9 +182,9 @@ def like_post(post_id: int, current_user: User = Depends(get_current_user), db: 
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     db_post.likes_count += 1
     db.commit()
-    return {"likes_count": db_post.likes_count}
+    return {"likes_count": db_post.likes_count, "is_hot": db_post.is_hot}
 
-# 6. 댓글 작성
+# 7. 댓글 작성
 @app.post("/api/posts/{post_id}/comments", response_model=CommentResponse)
 def create_comment(post_id: int, comment_data: CommentCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     db_post = db.query(Post).filter(Post.id == post_id).first()
@@ -201,12 +203,12 @@ def create_comment(post_id: int, comment_data: CommentCreate, current_user: User
     db.refresh(db_comment)
     return db_comment
 
-# 7. 내 작성글 조회
+# 8. 내 작성글 조회
 @app.get("/api/users/me/posts", response_model=List[PostResponse])
 def get_my_posts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return db.query(Post).filter(Post.user_id == current_user.id).order_by(Post.id.desc()).all()
 
-# 8. 댓글 수정
+# 9. 댓글 수정
 @app.put("/api/comments/{comment_id}", response_model=CommentResponse)
 def update_comment(
     comment_id: int, 
@@ -232,7 +234,7 @@ def update_comment(
     db.refresh(db_comment)
     return db_comment
 
-# 9. 댓글 삭제
+# 10. 댓글 삭제
 @app.delete("/api/comments/{comment_id}")
 def delete_comment(
     comment_id: int, 
